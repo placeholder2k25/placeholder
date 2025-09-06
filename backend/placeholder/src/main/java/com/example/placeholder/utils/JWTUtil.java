@@ -27,13 +27,13 @@ public class JWTUtil {
     private String secretKey;
 
     // Generate token with role included
-    public String generateToken(String username, String role, long expiryMinutes, String tokenType) {
+    public String generateToken(String userId, String role, long expiryMinutes, String tokenType) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("type", tokenType);
         claims.put("role", role.toUpperCase());  // ADD ROLE CLAIM
         return Jwts.builder()
                 .setClaims(claims)
-                .setSubject(username)
+                .setSubject(userId)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + expiryMinutes * 60 * 1000))
                 .signWith(getKey(), SignatureAlgorithm.HS256)

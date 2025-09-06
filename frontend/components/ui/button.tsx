@@ -25,10 +25,22 @@ const buttonVariants = cva(
         lg: 'h-11 rounded-md px-8',
         icon: 'h-10 w-10',
       },
+      colorScheme: {
+        primary:
+          'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg hover:shadow-xl',
+        purple:
+          'bg-purple-600 hover:bg-purple-700 text-white shadow-md hover:shadow-lg',
+        blue:
+          'bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg',
+        green:
+          'bg-green-600 hover:bg-green-700 text-white shadow-md hover:shadow-lg',
+        none: '',
+      },
     },
     defaultVariants: {
       variant: 'default',
       size: 'default',
+      colorScheme: 'none',
     },
   }
 );
@@ -36,21 +48,48 @@ const buttonVariants = cva(
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
-  asChild?: boolean;
+  asChild?: boolean
+  isLoading?: boolean
+  loadingText?: string
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
-    const Comp = asChild ? Slot : 'button';
+  (
+    {
+      className,
+      variant,
+      size,
+      colorScheme,
+      asChild = false,
+      isLoading = false,
+      loadingText,
+      children,
+      disabled,
+      ...props
+    },
+    ref
+  ) => {
+    const Comp = asChild ? Slot : 'button'
+
     return (
       <Comp
-        className={cn(buttonVariants({ variant, size, className }))}
+        className={cn(buttonVariants({ variant, size, colorScheme, className }))}
         ref={ref}
+        disabled={isLoading || disabled}
         {...props}
-      />
-    );
+      >
+        {isLoading ? (
+          <div className="flex items-center space-x-2">
+            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            {loadingText && <span>{loadingText}</span>}
+          </div>
+        ) : (
+          children
+        )}
+      </Comp>
+    )
   }
-);
-Button.displayName = 'Button';
+)
+Button.displayName = 'Button'
 
-export { Button, buttonVariants };
+export { Button, buttonVariants }

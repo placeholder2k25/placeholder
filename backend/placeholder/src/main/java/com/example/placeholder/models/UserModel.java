@@ -18,9 +18,9 @@ import jakarta.validation.constraints.Size;
 public class UserModel {
 
     @Id
-    private String id;
+    private String userId;
 
-@Indexed(unique = true)
+    @Indexed(unique = true)
     @NotBlank(message = "Username is required")
     @Size(min = 3, max = 20, message = "Username must be between 3 and 20 characters")
     private String username;
@@ -37,13 +37,16 @@ public class UserModel {
     @Indexed(unique = true)
     @NotBlank(message = "Phone number is required")
     @Pattern(regexp = "^[0-9]{10}$", message = "Phone number must be 10 digits")
-    private String phoneNo;
+    private String phoneNumber;
 
     @NotBlank(message = "Role is required")
     private String role;
 
     @NotNull(message = "Terms must be accepted")
     private Boolean termsAccepted;
+
+    @Builder.Default
+    private String isProfileComplete = "false";
 
     @Builder.Default
     private BrandDetails brandDetails = null;
@@ -63,7 +66,7 @@ public class UserModel {
         @Builder.Default
         private String brandDescription = "";
         @Builder.Default
-        private String location = "";
+        private String locationUrl = "";
         @Builder.Default
         private SocialMediaHandles socialMediaHandles = SocialMediaHandles.builder().build();
     }
