@@ -1,4 +1,4 @@
-package com.example.placeholder.utils;
+package com.example.placeholder.API.Gateway.utils;
 
 import java.util.Date;
 import java.util.HashMap;
@@ -8,7 +8,6 @@ import java.util.function.Function;
 import javax.crypto.SecretKey;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import io.jsonwebtoken.Claims;
@@ -17,8 +16,8 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
-import jakarta.servlet.http.Cookie;
-import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.HttpCookie;
+import org.springframework.http.server.reactive.ServerHttpRequest;
 
 @Service
 public class JWTUtil {
@@ -26,14 +25,14 @@ public class JWTUtil {
     @Value("${jwt.secret}")
     private String secretKey;
 
-    // Generate token with role included
+    // ✅ Generate token with userId + role
     public String generateToken(String userId, String role, long expiryMinutes, String tokenType) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("type", tokenType);
-        claims.put("role", role.toUpperCase());  // ADD ROLE CLAIM
+        claims.put("role", role.toUpperCase());
         return Jwts.builder()
                 .setClaims(claims)
-                .setSubject(userId)
+                .setSubject(userId) // 👈 userId is subject
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + expiryMinutes * 60 * 1000))
                 .signWith(getKey(), SignatureAlgorithm.HS256)
@@ -45,14 +44,19 @@ public class JWTUtil {
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
-    // Extract username from token
-    public String extractUserName(String token) {
+    // ✅ Extract userId (sub)
+    public String extractUserId(String token) {
         return extractClaim(token, Claims::getSubject);
     }
 
-    // Extract role from token
+    // ✅ Extract role
     public String extractUserRole(String token) {
         return extractClaim(token, claims -> claims.get("role", String.class));
+    }
+
+    // ✅ Extract token type (access_token / refresh_token)
+    public String extractTokenType(String token) {
+        return extractClaim(token, claims -> claims.get("type", String.class));
     }
 
     private <T> T extractClaim(String token, Function<Claims, T> claimResolver) {
@@ -69,30 +73,55 @@ public class JWTUtil {
                 .getBody();
     }
 
-    public boolean validateToken(String token, UserDetails userDetails) {
-        final String userName = extractUserName(token);
-        return (userName.equals(userDetails.getUsername()) && !isTokenExpired(token));
-    }
+    // ✅ Validate by just checking expiry & subject match
+    // public boolean validateToken(String token, String expectedUserId) {
+    // try {
+    // final String userId = extractUserId(token);
+    // return userId.equals(expectedUserId) && !isTokenExpired(token);
+    // } catch (Exception e) {
+    // return false;
+    // }
+    // }
 
-    private boolean isTokenExpired(String token) {
-        return extractExpiration(token).before(new Date());
-    }
-
-    private Date extractExpiration(String token) {
-        return extractClaim(token, Claims::getExpiration);
-    }
-
-    public String extractTokenFromCookies(HttpServletRequest request) {
-        if (request.getCookies() != null) {
-            for (Cookie cookie : request.getCookies()) {
-                if ("access_token".equals(cookie.getName())) {
-                    return cookie.getValue();
-                }
-            }
+    public boolean validateToken(String token) {
+        try {
+            extractAllClaims(token); // throws if invalid/expired
+            return true;
+        } catch (Exception e) {
+            return false;
         }
-        return null;
     }
 
+    // private boolean isTokenExpired(String token) {
+    //     return extractExpiration(token).before(new Date());
+    // }
+
+    // private Date extractExpiration(String token) {
+    //     return extractClaim(token, Claims::getExpiration);
+    // }
+
+    // ✅ Get access token from cookie
+    public String extractTokenFromCookies(ServerHttpRequest request) {
+        HttpCookie cookie = request.getCookies().getFirst("access_token");
+        return cookie != null ? cookie.getValue() : null;
+    }
+
+    // ✅ Get username/userId from cookie (if stored separately)
+    public String extractUserIdFromCookies(ServerHttpRequest request) {
+        HttpCookie cookie = request.getCookies().getFirst("username"); // 🔄 better rename cookie to "userId"
+        return cookie != null ? cookie.getValue() : null;
+    }
+
+    // ✅ Handle expired tokens gracefully
+    public String extractUserIdEvenIfExpired(String token) {
+        try {
+            return extractUserId(token);
+        } catch (ExpiredJwtException e) {
+            return e.getClaims().getSubject();
+        }
+    }
+
+    // ✅ Check if token will expire soon
     public boolean willExpireSoon(String token, int thresholdMinutes) {
         try {
             Claims claims = Jwts.parserBuilder()
@@ -110,24 +139,4 @@ public class JWTUtil {
             return true;
         }
     }
-
-    public String extractUsernameEvenIfExpired(String token) {
-        try {
-            return extractUserName(token);
-        } catch (ExpiredJwtException e) {
-            return e.getClaims().getSubject();
-        }
-    }
-
-    public String extractUsernameFromCookie(HttpServletRequest request) {
-        if (request.getCookies() != null) {
-            for (Cookie cookie : request.getCookies()) {
-                if ("username".equals(cookie.getName())) {
-                    return cookie.getValue();
-                }
-            }
-        }
-        return null;
-    }
 }
-

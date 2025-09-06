@@ -26,7 +26,7 @@ public class RegistrationRequest {
 
     @NotBlank(message = "Phone number must not be empty")
     @Pattern(regexp = "^[0-9]{10}$", message = "Phone number must be 10 digits")
-    private String phoneNo;
+    private String phoneNumber;
 
     @NotBlank(message = "Role must not be empty")
     private String role;
