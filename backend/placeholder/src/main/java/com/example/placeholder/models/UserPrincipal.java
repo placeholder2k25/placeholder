@@ -40,7 +40,7 @@ public class UserPrincipal implements UserDetails {
     }
 
     public String getUserId() {
-        return user.getId();
+        return user.getUserId();
     }
 
     public UserModel getUser() {

@@ -1,8 +1,8 @@
-import Navbar from '@/components/Navbar'
-import Hero from '@/components/Hero'
-import HowItWorks from '@/components/HowItWorks'
-import Features from '@/components/Features'
-import Footer from '@/components/Footer'
+import Navbar from '@/components/landing page/Navbar'
+import Hero from '@/components/landing page/Hero'
+import HowItWorks from '@/components/landing page/HowItWorks'
+import Features from '@/components/landing page/Features'
+import Footer from '@/components/landing page/Footer'
 
 export default function Home() {
   return (
