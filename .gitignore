@@ -1,1 +1,4 @@
-backend/b-flask/campaign-ui/src/App.js
+backend/b-flask/campaign-ui/
+backend/b-flask/venv
+backend/placeholder/src/test
+placeholder-API-Gateway/src/test

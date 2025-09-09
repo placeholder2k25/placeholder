@@ -21,42 +21,6 @@ public class AuthClientService {
         this.webClient = webClientBuilder.build();
     }
 
-    // public Mono<AuthResponse> login(String path, String requestBody) {
-    // return webClient.post()
-    // .uri("http://localhost:8081" + path)
-    // .contentType(MediaType.APPLICATION_JSON)
-    // .body(BodyInserters.fromValue(requestBody))
-    // .retrieve()
-    // .bodyToMono(AuthResponse.class);
-    // }
-
-    // public Mono<AuthResponse> register(String path, String requestBody){
-    // return webClient.post()
-    // .uri("http://localhost:8081" + path)
-    // .contentType(MediaType.APPLICATION_JSON)
-    // .body(BodyInserters.fromValue(requestBody))
-    // .retrieve()
-    // .bodyToMono(AuthResponse.class);
-    // }
-
-    // public ResponseCookie createAccessCookie(String token) {
-    // return ResponseCookie.from("access_token", token)
-    // .httpOnly(true)
-    // .secure(true)
-    // .path("/")
-    // .maxAge(Duration.ofMinutes(15))
-    // .build();
-    // }
-
-    // public ResponseCookie createRefreshCookie(String token) {
-    // return ResponseCookie.from("refresh_token", token)
-    // .httpOnly(true)
-    // .secure(true)
-    // .path("/")
-    // .maxAge(Duration.ofDays(7))
-    // .build();
-    // }
-
     public Mono<AuthResponse> login(String path, String requestBody) {
         return post(path, requestBody);
     }
