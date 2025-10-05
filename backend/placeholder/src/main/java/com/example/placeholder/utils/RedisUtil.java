@@ -18,7 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @Slf4j
 public class RedisUtil {
-    
+
     @Autowired
     private RedisTemplate<String, String> redisTemplate;
 
@@ -70,12 +70,12 @@ public class RedisUtil {
         }
     }
 
-    public void setToken(String keyPrefix, String username, String token, long expirySecond) {
+    public void setToken(String keyPrefix, String type, String token, long expirySecond) {
         try {
-            String key = key(keyPrefix, username);
+            String key = key(type, keyPrefix);
             redisTemplate.opsForValue().set(key, token, expirySecond, TimeUnit.SECONDS);
         } catch (Exception e) {
-            log.error("Error setting token in Redis for user '{}': {}", username, e.getMessage());
+            log.error("❌ Error setting token in Redis for type '{}': {}", type, e.getMessage(), e);
         }
     }
 

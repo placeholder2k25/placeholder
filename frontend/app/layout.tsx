@@ -16,6 +16,9 @@ export const metadata: Metadata = {
   },
 }
 
+import AuthBootstrap from "@/components/AuthBootstrap";
+import RouteGuard from "@/components/RouteGuard";
+
 export default function RootLayout({
   children,
 }: {
@@ -24,7 +27,10 @@ export default function RootLayout({
   return (
     <html lang="en" className="scroll-smooth">
       <body className={`${inter.className} antialiased`}>
-        {children}
+        <AuthBootstrap />
+        <RouteGuard>
+          {children}
+        </RouteGuard>
       </body>
     </html>
   )

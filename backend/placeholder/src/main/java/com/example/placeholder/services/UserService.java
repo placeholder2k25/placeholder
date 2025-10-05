@@ -1,5 +1,6 @@
 package com.example.placeholder.services;
 
+import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 
@@ -17,6 +18,7 @@ import com.example.placeholder.dto.CreatorUpdateRequest;
 import com.example.placeholder.dto.LoginRequest;
 import com.example.placeholder.dto.RegistrationRequest;
 import com.example.placeholder.exception.ResourceNotFoundException;
+import com.example.placeholder.models.MailEvent;
 import com.example.placeholder.models.UserModel;
 import com.example.placeholder.repository.UserRepository;
 import com.example.placeholder.utils.JWTUtil;
@@ -41,6 +43,9 @@ public class UserService {
     @Autowired
     private RedisUtil redisService;
 
+    @Autowired
+    private KafkaProducerService kafkaProducerService;
+
     public ResponseEntity<AuthResponse> registerUser(@Valid RegistrationRequest request) {
         try {
             String rawUsername = sanitize(request.getUsername());
@@ -54,31 +59,64 @@ public class UserService {
                     .email(rawEmail)
                     .password(passwordEncoder.encode(request.getPassword()))
                     .phoneNumber(request.getPhoneNumber())
-                    .role(request.getRole())
+                    .role(request.getRole().toUpperCase())
                     .termsAccepted(request.isTermsAccepted())
-                    .isProfileComplete("false");
+                    .isProfileComplete(false);
 
             if ("BRAND".equalsIgnoreCase(request.getRole())) {
-                userBuilder.brandDetails(UserModel.BrandDetails.builder().build());
+                userBuilder
+                        .brandName("")
+                        .website("")
+                        .companyType("")
+                        .brandDescription("")
+                        .locationUrl("")
+                        .socialMediaHandles(UserModel.SocialMediaHandles.builder().build());
             } else if ("CREATOR".equalsIgnoreCase(request.getRole())) {
-                userBuilder.creatorDetails(UserModel.CreatorDetails.builder().build());
+                userBuilder
+                        .instagramId("")
+                        .bio("")
+                        .category("")
+                        .location("");
             }
 
             UserModel user = userBuilder.build();
             userRepository.save(user);
-
+            sendMail(user.getEmail(), user.getUsername(), user.getRole());
             // Generate tokens
-            Map<String, String> tokens = generateAndStoreTokens(user.getUserId(), user.getRole(), 10, 60 * 24 * 7);
+            Map<String, String> tokens = generateAndStoreTokens(
+                    user.getUserId(),
+                    user.getRole(),
+                    10,
+                    60 * 24 * 7 // refresh token validity in minutes
+            );
+
             log.info("✅ User '{}' registered successfully", user.getUsername());
 
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(new AuthResponse(tokens.get("access_Token"), tokens.get("refresh_Token_handle")));
+
         } catch (Exception e) {
             log.error("Error during user registration", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new AuthResponse("Internal server error", null));
         }
     }
+
+    private void sendMail(String toEmail, String username, String mailEvent) {
+
+        String eventType = mailEvent.equals("CREATOR") ? "CREATOR_REGISTERED" : "BRAND_REGISTERED";
+        MailEvent event = new MailEvent(
+                UUID.randomUUID().toString(),
+                eventType,
+                Instant.now(),
+                Map.of(
+                        "to", toEmail,
+                        "name", username),
+                0);
+
+        kafkaProducerService.sendEmailEvent(event);
+    }
+
 
     public ResponseEntity<AuthResponse> loginUser(@Valid @RequestBody LoginRequest request) {
         try {
@@ -126,40 +164,34 @@ public class UserService {
         return value != null ? value.trim() : "";
     }
 
-    private Map<String, String> generateAndStoreTokens(String username, String role, long accessExpiryMin,
+    private Map<String, String> generateAndStoreTokens(String userId, String role, long accessExpiryMin,
             long refreshExpiryMin) {
-        String accessToken = jwtservice.generateToken(username, role, accessExpiryMin, "access_Token");
-        String refreshToken = jwtservice.generateToken(username, role, refreshExpiryMin, "refresh_Token");
+        String accessToken = jwtservice.generateToken(userId, role, accessExpiryMin, "access_Token");
+        String refreshToken = jwtservice.generateToken(userId, role, refreshExpiryMin, "refresh_Token");
 
         String newHandle = UUID.randomUUID().toString();
 
-        redisService.setToken(newHandle, username, refreshToken, refreshExpiryMin * 60);
+        redisService.setToken(newHandle, "refreshHandle", refreshToken, refreshExpiryMin * 60);
 
         return Map.of("access_Token", accessToken, "refresh_Token_handle", newHandle);
     }
 
     public UserModel updateBrandDetails(String userId, @Valid BrandUpdateRequest request) {
         UserModel user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + userId));
 
         if (!"BRAND".equalsIgnoreCase(user.getRole())) {
             new BadRequestException("User is not allowed to update brand details");
         }
 
-        UserModel.BrandDetails brandDetails = UserModel.BrandDetails.builder()
-                .brandName(request.getBrandName())
-                .website(request.getWebsite())
-                .companyType(request.getCompanyType())
-                .brandDescription(request.getBrandDescription())
-                .locationUrl(request.getLocationUrl())
-                // .socialMediaHandles(UserModel.SocialMediaHandles.builder()
-                // .instagram(request.getSocialMediaHandles().getInstagram())
-                // .facebook(request.getSocialMediaHandles().getFacebook())
-                // .twitter(request.getSocialMediaHandles().getTwitter())
-                // .build())
-                .build();
+        // Update flat fields
+        user.setBrandName(request.getBrandName());
+        user.setWebsite(request.getWebsite());
+        user.setCompanyType(request.getCompanyType());
+        user.setBrandDescription(request.getBrandDescription());
+        user.setLocationUrl(request.getLocationUrl());
+        user.setIsProfileComplete(true);
 
-        user.setBrandDetails(brandDetails);
         return userRepository.save(user);
     }
 
@@ -171,14 +203,13 @@ public class UserService {
             new BadRequestException("User is not allowed to update creator details");
         }
 
-        UserModel.CreatorDetails creatorDetails = UserModel.CreatorDetails.builder()
-                .instagramId(request.getInstagramId())
-                .bio(request.getBio())
-                .category(request.getCategory())
-                .location(request.getLocation())
-                .build();
+        // Update flat creator fields
+        user.setInstagramId(request.getInstagramId());
+        user.setBio(request.getBio());
+        user.setCategory(request.getCategory());
+        user.setLocation(request.getLocation());
+        user.setIsProfileComplete(true);
 
-        user.setCreatorDetails(creatorDetails);
         return userRepository.save(user);
     }
 

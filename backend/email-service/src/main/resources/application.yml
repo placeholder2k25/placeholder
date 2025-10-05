@@ -1,0 +1,37 @@
+server:
+  port: 8082   # Run Mail Service on its own port
+
+spring:
+  application:
+    name: mail-service
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: mail-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer: # required only for DLQ recoverer to publish messages
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+    listener:
+      ack-mode: record
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: softwaredev1112@gmail.com       # replace with real email
+    password: qbvu ustb zrjy vzki          # use App Password, not raw Gmail password
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+logging:
+  level:
+    root: INFO
+    org.springframework.kafka: INFO
+    com.example.email_service: DEBUG

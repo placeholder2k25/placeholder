@@ -1,7 +1,10 @@
 package com.example.placeholder.models;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -12,7 +15,10 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
+
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
 @Document(collection = "users")
 public class UserModel {
@@ -46,43 +52,24 @@ public class UserModel {
     private Boolean termsAccepted;
 
     @Builder.Default
-    private String isProfileComplete = "false";
+    private Boolean isProfileComplete = false;
 
+    // --- Brand fields flattened ---
+    private String brandName;
+    private String website;
+    private String companyType;
+    private String brandDescription;
+    private String locationUrl;
+
+    // --- Social media nested ---
     @Builder.Default
-    private BrandDetails brandDetails = null;
+    private SocialMediaHandles socialMediaHandles = SocialMediaHandles.builder().build();
 
-    @Builder.Default
-    private CreatorDetails creatorDetails = null;
-
-    @Data
-    @Builder
-    public static class BrandDetails {
-        @Builder.Default
-        private String brandName = "";
-        @Builder.Default
-        private String website = "";
-        @Builder.Default
-        private String companyType = "";
-        @Builder.Default
-        private String brandDescription = "";
-        @Builder.Default
-        private String locationUrl = "";
-        @Builder.Default
-        private SocialMediaHandles socialMediaHandles = SocialMediaHandles.builder().build();
-    }
-
-    @Data
-    @Builder
-    public static class CreatorDetails {
-        @Builder.Default
-        private String instagramId = "";
-        @Builder.Default
-        private String bio = "";
-        @Builder.Default
-        private String category = "";
-        @Builder.Default
-        private String location = "";
-    }
+    // --- Creator Details directly here ---
+    private String instagramId;
+    private String bio;
+    private String category;
+    private String location;
 
     @Data
     @Builder

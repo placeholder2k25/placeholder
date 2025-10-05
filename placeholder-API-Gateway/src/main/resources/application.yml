@@ -2,15 +2,14 @@ server:
   port: 8080
 
 spring:
-  data:
-        redis:
-            host: redis-19320.c16.us-east-1-3.ec2.redns.redis-cloud.com:19320
-            port: 19320
-            password: Iibx3HzYvlQDsoCF99ZwFZkFT7mhW87P
   application:
     name: api-gateway
+  data:
+      redis:
+          host: redis-19320.c16.us-east-1-3.ec2.redns.redis-cloud.com
+          port: 19320
+          password: Iibx3HzYvlQDsoCF99ZwFZkFT7mhW87P
 
-  spring:
   cloud:
     gateway:
       default-filters:

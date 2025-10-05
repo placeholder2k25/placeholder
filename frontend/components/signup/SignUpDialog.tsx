@@ -156,7 +156,7 @@ export function SignUpDialog({
         confirmPassword: formData.confirmPassword,
         phoneNumber: formData.phoneNumber,
         isCreator: formData.isCreator,
-        acceptTerms: formData.acceptTerms,
+        termsAccepted: formData.acceptTerms,
         role: formData.isCreator ? "creator" : "brand",
       });
 

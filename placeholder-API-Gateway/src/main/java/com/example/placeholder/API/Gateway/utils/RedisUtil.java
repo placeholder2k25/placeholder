@@ -16,40 +16,27 @@ public class RedisUtil {
     @Autowired
     private ReactiveRedisTemplate<String, String> redisTemplate;
 
-    // public Mono<Boolean> saveToken(String userId, String refreshToken, Duration
-    // expiry) {
-    // return redisTemplate
-    // .opsForValue()
-    // .set("refresh:" + userId, refreshToken, expiry)
-    // .doOnError(e -> log.error("Failed to save refresh token for {}: {}", userId,
-    // e.getMessage()));
-    // }
-
-    // public Mono<String> getToken(String userId) {
-    // return redisTemplate
-    // .opsForValue()
-    // .get("refresh:" + userId)
-    // .doOnError(e -> log.error("Failed to get refresh token for {}: {}", userId,
-    // e.getMessage()));
-    // }
-
-    // public Mono<Boolean> deleteToken(String userId) {
-    // return redisTemplate
-    // .delete("refresh:" + userId)
-    // .map(deleted -> deleted > 0)
-    // .doOnError(e -> log.error("Failed to delete refresh token for {}: {}",
-    // userId, e.getMessage()));
-    // }
-
     public Mono<Boolean> saveRefreshHandle(String handle, String refreshToken, Duration expiry) {
         return redisTemplate.opsForValue()
                 .set("refreshHandle:" + handle, refreshToken, expiry);
     }
 
     public Mono<String> getRefreshTokenByHandle(String handle) {
-        return redisTemplate.opsForValue()
-                .get("refreshHandle:" + handle);
-    }
+    String key = "refreshHandle:" + handle;
+
+    return redisTemplate.opsForValue()
+            .get(key)
+            .doOnNext(val -> {
+                log.info("✅ Redis hit for key={} -> {}", key, val);
+            })
+            .switchIfEmpty(Mono.fromRunnable(() -> {
+                log.warn("⚠️ No refresh token found in Redis for key={}", key);
+            }))
+            .doOnError(err -> {
+                log.error("❌ Redis error while fetching key={}", key, err);
+            });
+}
+
 
     public Mono<Boolean> deleteRefreshHandle(String handle) {
         return redisTemplate.delete("refreshHandle:" + handle)
