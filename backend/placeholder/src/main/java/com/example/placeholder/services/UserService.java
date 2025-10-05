@@ -1,5 +1,6 @@
 package com.example.placeholder.services;
 
+import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 
@@ -17,6 +18,7 @@ import com.example.placeholder.dto.CreatorUpdateRequest;
 import com.example.placeholder.dto.LoginRequest;
 import com.example.placeholder.dto.RegistrationRequest;
 import com.example.placeholder.exception.ResourceNotFoundException;
+import com.example.placeholder.models.MailEvent;
 import com.example.placeholder.models.UserModel;
 import com.example.placeholder.repository.UserRepository;
 import com.example.placeholder.utils.JWTUtil;
@@ -40,6 +42,9 @@ public class UserService {
 
     @Autowired
     private RedisUtil redisService;
+
+    @Autowired
+    private KafkaProducerService kafkaProducerService;
 
     public ResponseEntity<AuthResponse> registerUser(@Valid RegistrationRequest request) {
         try {
@@ -76,7 +81,7 @@ public class UserService {
 
             UserModel user = userBuilder.build();
             userRepository.save(user);
-
+            sendMail(user.getEmail(), user.getUsername(), user.getRole());
             // Generate tokens
             Map<String, String> tokens = generateAndStoreTokens(
                     user.getUserId(),
@@ -96,6 +101,22 @@ public class UserService {
                     .body(new AuthResponse("Internal server error", null));
         }
     }
+
+    private void sendMail(String toEmail, String username, String mailEvent) {
+
+        String eventType = mailEvent.equals("CREATOR") ? "CREATOR_REGISTERED" : "BRAND_REGISTERED";
+        MailEvent event = new MailEvent(
+                UUID.randomUUID().toString(),
+                eventType,
+                Instant.now(),
+                Map.of(
+                        "to", toEmail,
+                        "name", username),
+                0);
+
+        kafkaProducerService.sendEmailEvent(event);
+    }
+
 
     public ResponseEntity<AuthResponse> loginUser(@Valid @RequestBody LoginRequest request) {
         try {
@@ -155,53 +176,6 @@ public class UserService {
         return Map.of("access_Token", accessToken, "refresh_Token_handle", newHandle);
     }
 
-    // public UserModel updateBrandDetails(String userId, @Valid BrandUpdateRequest
-    // request) {
-    // UserModel user = userRepository.findById(userId)
-    // .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-
-    // if (!"BRAND".equalsIgnoreCase(user.getRole())) {
-    // new BadRequestException("User is not allowed to update brand details");
-    // }
-
-    // UserModel.BrandDetails brandDetails = UserModel.BrandDetails.builder()
-    // .brandName(request.getBrandName())
-    // .website(request.getWebsite())
-    // .companyType(request.getCompanyType())
-    // .brandDescription(request.getBrandDescription())
-    // .locationUrl(request.getLocationUrl())
-    // // .socialMediaHandles(UserModel.SocialMediaHandles.builder()
-    // // .instagram(request.getSocialMediaHandles().getInstagram())
-    // // .facebook(request.getSocialMediaHandles().getFacebook())
-    // // .twitter(request.getSocialMediaHandles().getTwitter())
-    // // .build())
-    // .build();
-
-    // user.setBrandDetails(brandDetails);
-    // return userRepository.save(user);
-    // }
-
-    // public UserModel updateCreatorDetails(String userId, @Valid
-    // CreatorUpdateRequest request) {
-    // UserModel user = userRepository.findById(userId)
-    // .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " +
-    // userId));
-
-    // if (!"CREATOR".equalsIgnoreCase(user.getRole())) {
-    // new BadRequestException("User is not allowed to update creator details");
-    // }
-
-    // UserModel.CreatorDetails creatorDetails = UserModel.CreatorDetails.builder()
-    // .instagramId(request.getInstagramId())
-    // .bio(request.getBio())
-    // .category(request.getCategory())
-    // .location(request.getLocation())
-    // .build();
-
-    // user.setCreatorDetails(creatorDetails);
-    // return userRepository.save(user);
-    // }
-
     public UserModel updateBrandDetails(String userId, @Valid BrandUpdateRequest request) {
         UserModel user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + userId));
@@ -217,18 +191,6 @@ public class UserService {
         user.setBrandDescription(request.getBrandDescription());
         user.setLocationUrl(request.getLocationUrl());
         user.setIsProfileComplete(true);
-
-        // Update nested social media handles if provided
-        // if (request.getSocialMediaHandles() != null) {
-        // UserModel.SocialMediaHandles handles = user.getSocialMediaHandles();
-        // if (handles == null) {
-        // handles = UserModel.SocialMediaHandles.builder().build();
-        // }
-        // handles.setInstagram(request.getSocialMediaHandles().getInstagram());
-        // handles.setFacebook(request.getSocialMediaHandles().getFacebook());
-        // handles.setTwitter(request.getSocialMediaHandles().getTwitter());
-        // user.setSocialMediaHandles(handles);
-        // }
 
         return userRepository.save(user);
     }

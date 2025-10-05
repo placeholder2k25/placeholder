@@ -26,7 +26,7 @@ public class GatewayConfig {
                         .filters(f -> f.filter(authFilter)) // apply AuthFilter directly
                         .uri("http://localhost:8081"))
                 .route("springboot-service", r -> r.path("/spring-boot/api/**")
-                        .filters(f -> f.stripPrefix(1). filter(jwtReactiveFilter))
+                        .filters(f -> f.stripPrefix(1).filter(jwtReactiveFilter))
                         .uri("http://localhost:8081"))
                 .route("flask-service", r -> r.path("/flask/api/**")
                         .filters(f -> f.stripPrefix(1))

@@ -15,7 +15,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, EyeOff } from "lucide-react";
-import { login } from "@/lib/api";
+import { getAuthStatus, login } from "@/lib/api";
+import { useGlobalStore } from "@/lib/globalStore";
+import { useRouter } from "next/navigation";
 
 interface LoginDialogProps {
   trigger?: React.ReactNode;
@@ -33,6 +35,9 @@ export function LoginDialog({ trigger, open, onOpenChange }: LoginDialogProps) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  const setAuth = useGlobalStore((s) => s.setAuth);
+  const router = useRouter();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -80,16 +85,23 @@ export function LoginDialog({ trigger, open, onOpenChange }: LoginDialogProps) {
 
     setIsLoading(true);
     try {
-      const data = await login({
+      await login({
         username: formData.username,
         password: formData.password,
         rememberMe: formData.rememberMe,
       });
 
-      // Close dialog on success
-      onOpenChange?.(false);
+      // Immediately refresh auth status and store it
+      const status = await getAuthStatus();
+      setAuth({
+        authenticated: !!status.authenticated,
+        username: status.username ?? null,
+        roles: status.roles ?? [],
+      });
 
-      // Show success message from backend if available
+      // Close dialog and redirect to dashboard
+      onOpenChange?.(false);
+      router.replace("/dashboard");
     } catch (err) {
       console.error("Login error:", err);
       alert("Failed to login. Please try again.");

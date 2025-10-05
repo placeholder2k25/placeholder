@@ -150,6 +150,7 @@ export default function CreateCampaignSection() {
   });
 
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageAspect, setImageAspect] = useState<'16:9' | '9:16' | null>(null);
 
   const onSubmit = async (values: CreateCampaignValues) => {
     try {
@@ -250,11 +251,36 @@ export default function CreateCampaignSection() {
                         className="hidden"
                         onChange={(e) => {
                           const file = e.target.files?.[0];
-                          if (file) {
-                            const url = URL.createObjectURL(file);
-                            setImagePreview(url);
-                            form.setValue("image", url, { shouldDirty: true });
-                          }
+                          if (!file) return;
+
+                          const objectUrl = URL.createObjectURL(file);
+                          const img = new Image();
+
+                          img.onload = () => {
+                            const { width, height } = img;
+                            const ratio = width / height;
+                            const is916 = Math.abs(ratio - 9 / 16) < 0.02; // allow small tolerance
+                            const is169 = Math.abs(ratio - 16 / 9) < 0.02;
+
+                            if (!is916 && !is169) {
+                              alert("Please select an image with 9:16 or 16:9 aspect ratio.");
+                              URL.revokeObjectURL(objectUrl);
+                              e.currentTarget.value = ""; // reset input
+                              return;
+                            }
+
+                            setImagePreview(objectUrl);
+                            setImageAspect(is169 ? '16:9' : '9:16');
+                            form.setValue("image", objectUrl, { shouldDirty: true });
+                          };
+
+                          img.onerror = () => {
+                            alert("Could not load image. Please try another file.");
+                            URL.revokeObjectURL(objectUrl);
+                            e.currentTarget.value = "";
+                          };
+
+                          img.src = objectUrl;
                         }}
                       />
                     </label>
@@ -442,7 +468,12 @@ export default function CreateCampaignSection() {
                 <CardDescription>How creators may see it</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="aspect-video w-full overflow-hidden rounded-md border bg-neutral-100 ring-1 ring-purple-200/60">
+                <div
+                  className={
+                    "w-full overflow-hidden rounded-md border bg-neutral-100 ring-1 ring-purple-200/60 " +
+                    (imageAspect === '9:16' ? 'aspect-[9/16]' : 'aspect-video')
+                  }
+                >
                   {imagePreview ? (
                     <img src={imagePreview} alt="Cover" className="h-full w-full object-cover" />
                   ) : (

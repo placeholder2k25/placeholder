@@ -84,42 +84,6 @@ public class JwtReactiveFilter implements GatewayFilter {
             return exchange.getResponse().setComplete();
         }
 
-        // return redisUtil.getRefreshTokenByHandle(refreshHandle)
-        //         .flatMap(storedRefresh -> {
-        //             if (storedRefresh == null || !jwtUtil.validateToken(storedRefresh)) {
-        //                 exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-        //                 return exchange.getResponse().setComplete();
-        //             }
-
-        //             String userIdFromRefresh = jwtUtil.extractUserId(storedRefresh);
-        //             String role = jwtUtil.extractUserRole(storedRefresh);
-
-        //             String newAccess = jwtUtil.generateToken(userIdFromRefresh, role, 15, "access_token");
-        //             String newRefresh = jwtUtil.generateToken(userIdFromRefresh, role, 60 * 24 * 7, "refresh_token");
-        //             String newHandle = UUID.randomUUID().toString();
-
-        //             // ✅ Save new refresh handle in Redis
-        //             return redisUtil.saveRefreshHandle(newHandle, newRefresh, Duration.ofDays(7))
-        //                     .flatMap(v -> {
-        //                         // ✅ Add cookies BEFORE forwarding
-        //                         cookieUtil.addCookie(exchange, "access_token", newAccess, 15 * 60);
-        //                         cookieUtil.addCookie(exchange, "refresh_token", newHandle, 60 * 60 * 24 * 7);
-
-        //                         // ✅ Mutate request headers
-        //                         ServerHttpRequest mutatedRequest = exchange.getRequest()
-        //                                 .mutate()
-        //                                 .header("X-User-Id", userIdFromRefresh)
-        //                                 .header("X-User-Role", role)
-        //                                 .header("Authorization", newAccess)
-        //                                 .build();
-
-        //                         // ✅ Forward request downstream
-        //                         return chain.filter(exchange.mutate().request(mutatedRequest).build())
-        //                         .then(redisUtil.deleteRefreshHandle(refreshHandle).then(Mono.empty()));
-        //                     });
-        //         })
-        //         .onErrorResume(e -> unauthorizedResponse(exchange, "Unexpected error: " + e.getMessage()));
-
         return redisUtil.getRefreshTokenByHandle(refreshHandle)
         .flatMap(storedRefresh -> {
             if (storedRefresh == null || !jwtUtil.validateToken(storedRefresh)) {
