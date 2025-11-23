@@ -18,7 +18,7 @@ spring:
         webflux:
           routes:
             - id: auth-routes
-              uri: http://localhost:8081    # Same app, but only /auth
+              uri: http://localhost:8081 
               predicates:
                 - Path=/api/auth/**
               # filters:
