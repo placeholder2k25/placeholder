@@ -6,7 +6,7 @@ spring:
     name: mail-service
 
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: kafka:9092
     consumer:
       group-id: mail-service
       auto-offset-reset: earliest
